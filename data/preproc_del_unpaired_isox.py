@@ -91,14 +91,13 @@ def delete_unpaired(dfs_list):
         # group by scan number 
         pairs = df.groupby(['scan.no','compound'])['isotopolog'].size().reset_index(name='counts')
 
-        # create lists to delete  
-        to_del_scanno = pairs[(pairs['counts'] != 2)]['scan.no'].values
-        to_del_compound = pairs[(pairs['counts'] !=2 )]['compound'].values
+        # lists data to keep 
+        to_keep_scanno = pairs[(pairs['counts'] == 2)]['scan.no'].values
+        to_keep_compound = pairs[(pairs['counts'] ==2 )]['compound'].values
 
         # keep only nesessary data in dataframe
-        df = df[~(df['scan.no'].isin(to_del_scanno) & df['compound'].isin(to_del_compound))]
+        df = df[(df['scan.no'].isin(to_keep_scanno) & df['compound'].isin(to_keep_compound))]
         dfs_list_new.append(df)
-        #yield df
         print('Unpaired lines are deleted')
     return dfs_list_new
 
