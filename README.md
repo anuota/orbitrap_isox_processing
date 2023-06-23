@@ -3,7 +3,7 @@
 # script for preprocessing data from orbitrap in ISOX format
     # 1) splits the file based on times provided
     # 2) deletes unpaired compounds for each scan
- (c) by Anya for Ilya 23.May 2023
+ (c) by Anya for Ilya 22.june 2023 with edits by Denis
 
  run by typing in the command line inside the folder with files
  

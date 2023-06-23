@@ -1,7 +1,7 @@
 # script for preprocessing data from orbitrap
 #    # 1) splits the file based on times provided
 #    # 2) deletes unpaired compounds for each scan
-# (c) by Anya for Ilya 23.May 2023
+# (c) by Anya for Ilya 22.June 2023 with edits by Denis
 
 # run by typing in the command line inside the folder with files
 #    # python3 preproc_del_unpaired_isox.py 
@@ -15,21 +15,21 @@
 
 # if nesessary:
 # adjust cutting times in the def main:
-    # df1_split_times
-    # df2_split_times
-    # df3_split_times
-    # df4_split_times
+#   df1_split_times
+#   df2_split_times
+#   df3_split_times
+#   df4_split_times
 
 import glob
 import os
 import pandas as pd
 
-def preproc_isox(path, df1_split_times,df2_split_times,df3_split_times,df4_split_times):
 
-    #read in the file from the specified path
+def preproc_isox(path, df1_split_times, df2_split_times, df3_split_times, df4_split_times):
+    # read in the file from the specified path
     data_isox = pd.read_table(path, sep='\s+')
-    
-    #print info
+
+    # print info
     print('The total length of the file is ' + str(data_isox['time.min'].min())+' min to '+
       str(data_isox['time.min'].max()) + ' min')
     print('____________________________________')
@@ -39,19 +39,20 @@ def preproc_isox(path, df1_split_times,df2_split_times,df3_split_times,df4_split
         ' min \n 3rd ' + str(df3_split_times) +
         ' min \n 4th ' + str(df4_split_times) +' min')
 
-    #split the dataframe into 4 based on provided data
+    # split the dataframe into 4 based on provided data
     df1 = data_isox[(data_isox['time.min'] > df1_split_times[0]) & (data_isox['time.min'] < df1_split_times[1])] 
     df2 = data_isox[(data_isox['time.min'] > df2_split_times[0]) & (data_isox['time.min'] < df2_split_times[1])]
     df3 = data_isox[(data_isox['time.min'] > df3_split_times[0]) & (data_isox['time.min'] < df3_split_times[1])]
     df4 = data_isox[(data_isox['time.min'] > df4_split_times[0]) & (data_isox['time.min'] < df4_split_times[1])]
-    
+
     # reset times and scan number in the new dataframes
-    dfs_list=[df1,df2,df3,df4]
+    dfs_list = [df1, df2, df3, df4]
     for df in dfs_list:
-        df.loc[:,'time.min']=df['time.min']-df['time.min'].min()+0.01 
-        df.loc[:,'scan.no']=df['scan.no']-df['scan.no'].min()+1
-    
+        df.loc[:, 'time.min'] = df['time.min'] - df['time.min'].min() + 0.01
+        df.loc[:, 'scan.no'] = df['scan.no'] - df['scan.no'].min() + 1
+
     return dfs_list
+
 
 def percent(part, whole):
     try:
@@ -61,42 +62,43 @@ def percent(part, whole):
 
 
 def find_prob_comp(dfs_list):
-    #a function to find a problematic compound
-    #dfs_list=[df1,df2,df3,df4]
-    i=1
+    # a function to find a problematic compound
+    # dfs_list=[df1,df2,df3,df4]
+    i = 1
     for df in dfs_list:
-        print('___Working on file #'+str(i) )
-        i=i+1
-        #find problematic compunds
-        compounds=df['compound'].unique()
-        #print(compounds)
-        #print compound if its quantity does not match to number of scans
-        prob_comps=[comp for comp in compounds if df[(df['compound']==comp)]['isotopolog'].count()/2 != df['scan.no'].max()]
-        #print(prob_comps)
-        
+        print('___Working on file #' + str(i))
+        i = i + 1
+        # find problematic compunds
+        compounds = df['compound'].unique()
+        # print(compounds)
+        # print compound if its quantity does not match to number of scans
+        prob_comps = [comp for comp in compounds if df[(df['compound'] == comp)]['isotopolog'].count() / 2 != df['scan.no'].max()]
+        # print(prob_comps)
+
         # for each problmatic compound print number of scans and number of compounds   
         for prob_co in prob_comps:
-            numm_scans=(df['scan.no'].max())
-            num_comp=df[df['compound']==prob_co]['isotopolog'].count()/2
-            #calculate percent of missing data
-            perc = 100 - percent(num_comp,numm_scans)
-            print('Problematic compound: '+str(prob_co) +'; No of scans/compounds: ' +str(numm_scans)+' / '  +str(num_comp) )
-            print(f'   missing {perc:.2f} % of the data' )
+            numm_scans = (df['scan.no'].max())
+            num_comp = df[df['compound'] == prob_co]['isotopolog'].count() / 2
+            # calculate percent of missing data
+            perc = 100 - percent(num_comp, numm_scans)
+            print('Problematic compound: ' + str(prob_co) + '; No of scans/compounds: ' + str(numm_scans) + ' / ' + str(num_comp))
+            print(f'   missing {perc:.2f} % of the data')
+
 
 def delete_unpaired(dfs_list):
-    #delete scans of compounds with unpaired isotopologs
+    # delete scans of compounds with unpaired isotopologs
     print('Starting to delete unpaired lines')
-    dfs_list_new=[]
+    dfs_list_new = []
     for df in dfs_list:
-        # group by scan number 
-        pairs = df.groupby(['scan.no','compound'])['isotopolog'].size().reset_index(name='counts')
+        # group by scan number
+        pairs = df.groupby(['scan.no', 'compound'])['isotopolog'].size().reset_index(name='counts')
 
-        # lists data to keep 
-        to_keep_scanno = pairs[(pairs['counts'] == 2)]['scan.no'].values
-        to_keep_compound = pairs[(pairs['counts'] ==2 )]['compound'].values
+        # data to keep
+        pairs_to_keep = pairs[pairs['counts'] == 2].drop(columns='counts')
 
         # keep only nesessary data in dataframe
-        df = df[(df['scan.no'].isin(to_keep_scanno) & df['compound'].isin(to_keep_compound))]
+        df = df.merge(pairs_to_keep[['scan.no', 'compound']], on=['scan.no', 'compound'], how='inner')
+
         dfs_list_new.append(df)
         print('Unpaired lines are deleted')
     return dfs_list_new
