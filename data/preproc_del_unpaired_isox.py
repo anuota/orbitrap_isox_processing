@@ -61,7 +61,7 @@ def percent(part, whole):
         return 0
 
 
-def find_prob_comp(dfs_list):
+def find_prob_comp(dfs_list,fold_name):
     # a function to find a problematic compound
     # dfs_list=[df1,df2,df3,df4]
     i = 1
@@ -81,8 +81,11 @@ def find_prob_comp(dfs_list):
             num_comp = df[df['compound'] == prob_co]['isotopolog'].count() / 2
             # calculate percent of missing data
             perc = 100 - percent(num_comp, numm_scans)
-            print('Problematic compound: ' + str(prob_co) + '; No of scans/compounds: ' + str(numm_scans) + ' / ' + str(num_comp))
-            print(f'   missing {perc:.2f} % of the data')
+            
+            with open("./output.txt", "a") as f:
+                if perc>=3:
+                    print('Problematic compound: ' + str(prob_co) + '; No of scans/compounds: ' + str(numm_scans) + ' / ' + str(num_comp), file=f)
+                    print(f'   missing {perc:.2f} % of the data', file=f)
 
 
 def delete_unpaired(dfs_list):
@@ -104,21 +107,25 @@ def delete_unpaired(dfs_list):
     return dfs_list_new
 
 
-def save(dfs_list):
-    # #write down the dataframes
-
+def save(dfs_list,fold_name):
+    # # #write down the dataframes
     print('____________________________________')
     print('Currently saving:')
-    
+    i=1
     for df in dfs_list:
-        outpath=df['filename'].iloc[0]
+        #outpath=df['filename'].iloc[0]
+        outpath=fold_name
+        #print(outpath)
         os.makedirs(outpath, exist_ok=True)  
-        name=(outpath +'/'+ df['filename'].iloc[0]+'_'+str(df['compound'].min())+'_'+str(df['compound'].max())+'.isox')
+        #name=(outpath +'/'+ df['filename'].iloc[0]+'_'+str(df['compound'].min())+'_'+str(df['compound'].max())+'.isox')
+        name=(outpath +'/'+ outpath+'_pt'+str(i)+'.isox')
         
         print(name)
+        i=i+1
         df.to_csv(name, sep='\t',float_format='%.3f')
     print('____________________________________')
     print('New files are saved in ./' + outpath +'/')
+
 
 def main():    
     #path=glob.glob(os.path.join('../data/',"*.isox"))
@@ -141,14 +148,16 @@ def main():
             dfs_list = preproc_isox(path, df1_split_times,df2_split_times,df3_split_times,df4_split_times)
             print('____________________________________')
             print('Current file is ' + path)
-
+            with open("./output.txt", "a") as f:  
+                print('____________________________________',file=f)
+                print('Current file is ' + path,file=f)
             #if del #put a condition depending on the input
-            find_prob_comp(dfs_list)
+            find_prob_comp(dfs_list,fold_name)
             #delete unpaired scans with unpaired isotopologs
             dfs_list = delete_unpaired(dfs_list)
 
             #save files
-            save(dfs_list)
+            save(dfs_list,fold_name)
         else:
             print(f'Folder \'{fold_name}\' already exists')
             continue
