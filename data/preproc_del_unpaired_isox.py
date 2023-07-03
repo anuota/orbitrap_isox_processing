@@ -61,13 +61,14 @@ def percent(part, whole):
         return 0
 
 
-def find_prob_comp(dfs_list,fold_name):
+def find_prob_comp(dfs_list,fold_name,proc):
     # a function to find a problematic compound
     # dfs_list=[df1,df2,df3,df4]
     i = 1
     for df in dfs_list:
         print('___Working on file #' + str(i))
-        i = i + 1
+        with open("./output.txt", "a") as f:
+            print('___Working on file #' + str(i),file=f)
         # find problematic compunds
         compounds = df['compound'].unique()
         # print(compounds)
@@ -81,12 +82,16 @@ def find_prob_comp(dfs_list,fold_name):
             num_comp = df[df['compound'] == prob_co]['isotopolog'].count() / 2
             # calculate percent of missing data
             perc = 100 - percent(num_comp, numm_scans)
+            if perc>=proc:
+                df=df[~(df['compound'] == prob_co)]
             
             with open("./output.txt", "a") as f:
+                if perc>=proc:
+                    print('Missing more than ' +str(proc)+' data on compound '+str(prob_co)+'. Deleted ALL.',file=f)
                 if perc>=3:
                     print('Problematic compound: ' + str(prob_co) + '; No of scans/compounds: ' + str(numm_scans) + ' / ' + str(num_comp), file=f)
                     print(f'   missing {perc:.2f} % of the data', file=f)
-
+        i = i + 1
 
 def delete_unpaired(dfs_list):
     # delete scans of compounds with unpaired isotopologs
@@ -137,6 +142,8 @@ def main():
     df3_split_times=[210.05,300]
     df4_split_times=[300.05,330]
 
+    proc=15 # min peccent of missing data to delete ALL info about compound
+
     # these lines runs the function
     for path in paths:
         # do not process if folder exists 
@@ -152,7 +159,7 @@ def main():
                 print('____________________________________',file=f)
                 print('Current file is ' + path,file=f)
             #if del #put a condition depending on the input
-            find_prob_comp(dfs_list,fold_name)
+            find_prob_comp(dfs_list,fold_name,proc)
             #delete unpaired scans with unpaired isotopologs
             dfs_list = delete_unpaired(dfs_list)
 
